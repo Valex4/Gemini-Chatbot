@@ -1,6 +1,146 @@
+// import 'package:flutter/material.dart';
+// import 'package:connectivity_plus/connectivity_plus.dart';
+// import 'package:google_gemini/google_gemini.dart';
+
+// const apiKey = "AIzaSyCTREetNKiEu4cs1Wp8f8So5t6QJrfTJIs";
+
+// class ChatScreen extends StatefulWidget {
+//   const ChatScreen({Key? key}) : super(key: key);
+
+//   @override
+//   State<ChatScreen> createState() => _ChatScreenState();
+// }
+
+// class _ChatScreenState extends State<ChatScreen> {
+//   bool loading = false;
+//   bool isConnected = true;
+//   List<Map<String, String>> textChat = [];
+
+//   final TextEditingController _textController = TextEditingController();
+//   final ScrollController _controller = ScrollController();
+
+//   final gemini = GoogleGemini(apiKey: apiKey);
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _checkConnectivity();
+//   }
+
+//   void _checkConnectivity() async {
+//     final connectivityResult = await Connectivity().checkConnectivity();
+//     setState(() {
+//       isConnected = connectivityResult != ConnectivityResult.none;
+//     });
+//   }
+
+//   void fromText({required String query}) {
+//     if (!isConnected) return;
+
+//     setState(() {
+//       loading = true;
+//       textChat.add({"role": "User", "text": query});
+//       _textController.clear();
+//     });
+//     scrollToTheEnd();
+
+//     gemini.generateFromText(query).then((value) {
+//       setState(() {
+//         loading = false;
+//         textChat.add({"role": "Gemini", "text": value.text});
+//       });
+//       scrollToTheEnd();
+//     }).onError((error, stackTrace) {
+//       setState(() {
+//         loading = false;
+//         textChat.add({"role": "Gemini", "text": error.toString()});
+//       });
+//       scrollToTheEnd();
+//     });
+//   }
+
+//   void scrollToTheEnd() {
+//     WidgetsBinding.instance.addPostFrameCallback((_) {
+//       if (_controller.hasClients) {
+//         _controller.animateTo(
+//           _controller.position.maxScrollExtent,
+//           duration: Duration(milliseconds: 300),
+//           curve: Curves.easeOut,
+//         );
+//       }
+//     });
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text('Chat con Gemini'),
+//         backgroundColor: Colors.deepPurple,
+//       ),
+//       body: SafeArea(
+//         child: Column(
+//           children: [
+//             Expanded(
+//               child: ListView.builder(
+//                 controller: _controller,
+//                 itemCount: textChat.length,
+//                 padding: const EdgeInsets.all(8),
+//                 itemBuilder: (context, index) {
+//                   return Card(
+//                     elevation: 1,
+//                     margin: EdgeInsets.symmetric(vertical: 4),
+//                     child: ListTile(
+//                       leading: CircleAvatar(
+//                         child: Text(textChat[index]["role"]!.substring(0, 1)),
+//                         backgroundColor: textChat[index]["role"] == "User" ? Colors.blue : Colors.green,
+//                       ),
+//                       title: Text(textChat[index]["role"]!, style: TextStyle(fontWeight: FontWeight.bold)),
+//                       subtitle: Text(textChat[index]["text"]!),
+//                       contentPadding: EdgeInsets.all(8),
+//                     ),
+//                   );
+//                 },
+//               ),
+//             ),
+//             Padding(
+//               padding: const EdgeInsets.all(8.0),
+//               child: Row(
+//                 children: [
+//                   Expanded(
+//                     child: TextField(
+//                       controller: _textController,
+//                       decoration: InputDecoration(
+//                         hintText: 'Escribe un mensaje...',
+//                         border: OutlineInputBorder(
+//                           borderRadius: BorderRadius.circular(25),
+//                         ),
+//                       ),
+//                     ),
+//                   ),
+//                   SizedBox(width: 8),
+//                   IconButton(
+//                     icon: Icon(Icons.send),
+//                     onPressed: isConnected && !loading
+//                         ? () => fromText(query: _textController.text)
+//                         : null,
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:google_gemini/google_gemini.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 const apiKey = "AIzaSyCTREetNKiEu4cs1Wp8f8So5t6QJrfTJIs";
 
@@ -24,8 +164,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    // Verificar conectividad en la inicialización
     _checkConnectivity();
+    _loadChats();
   }
 
   void _checkConnectivity() async {
@@ -35,14 +175,32 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  void _loadChats() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? chatHistory = prefs.getString('chat_history');
+    if (chatHistory != null) {
+      setState(() {
+        textChat = List<Map<String, String>>.from(
+          json.decode(chatHistory).map((item) => Map<String, String>.from(item))
+        );
+      });
+    }
+  }
+
+  void _saveChats() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('chat_history', json.encode(textChat));
+  }
+
   void fromText({required String query}) {
-    if (!isConnected) return; // No hacer nada si no hay conexión
+    if (!isConnected) return;
 
     setState(() {
       loading = true;
       textChat.add({"role": "User", "text": query});
       _textController.clear();
     });
+    _saveChats();
     scrollToTheEnd();
 
     gemini.generateFromText(query).then((value) {
@@ -50,25 +208,28 @@ class _ChatScreenState extends State<ChatScreen> {
         loading = false;
         textChat.add({"role": "Gemini", "text": value.text});
       });
+      _saveChats();
       scrollToTheEnd();
     }).onError((error, stackTrace) {
       setState(() {
         loading = false;
         textChat.add({"role": "Gemini", "text": error.toString()});
       });
+      _saveChats();
       scrollToTheEnd();
     });
   }
 
   void scrollToTheEnd() {
-    // Mueve el Scroll al final después de cada mensaje
-    if (_controller.hasClients) {
-      _controller.animateTo(
-        _controller.position.maxScrollExtent,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_controller.hasClients) {
+        _controller.animateTo(
+          _controller.position.maxScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
@@ -77,75 +238,70 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         title: const Text('Chat con Gemini'),
         backgroundColor: Colors.deepPurple,
-      ),
-      body: Column(
-        children: [
-          // ListView que contiene los mensajes del chat
-          Expanded(
-            child: ListView.builder(
-              controller: _controller,
-              itemCount: textChat.length,
-              padding: const EdgeInsets.only(bottom: 20),
-              itemBuilder: (context, index) {
-                return ListTile(
-                  isThreeLine: true,
-                  leading: CircleAvatar(
-                    child: Text(textChat[index]["role"]!.substring(0, 1)),
-                  ),
-                  title: Text(textChat[index]["role"]!),
-                  subtitle: Text(textChat[index]["text"]!),
-                );
-              },
-            ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete),
+            onPressed: () async {
+              setState(() {
+                textChat.clear();
+              });
+              _saveChats();
+            },
           ),
-          // Caja de texto y botón de envío
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 26),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _textController,
-                    minLines: 1,
-                    maxLines: null,
-                    keyboardType: TextInputType.multiline,
-                    style: Theme.of(context).textTheme.bodyMedium!,
-                    decoration: InputDecoration(
-                      hintText: 'Escribe un mensaje...',
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide.none,
-                        borderRadius: BorderRadius.circular(50.0),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                controller: _controller,
+                itemCount: textChat.length,
+                padding: const EdgeInsets.all(8),
+                itemBuilder: (context, index) {
+                  return Card(
+                    elevation: 1,
+                    margin: EdgeInsets.symmetric(vertical: 4),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        child: Text(textChat[index]["role"]!.substring(0, 1)),
+                        backgroundColor: textChat[index]["role"] == "User" ? Colors.blue : Colors.green,
                       ),
-                      suffixIcon: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: loading
-                            ? const CircularProgressIndicator()
-                            : InkWell(
-                                onTap: isConnected
-                                    ? () {
-                                        fromText(query: _textController.text);
-                                      }
-                                    : null,
-                                child: CircleAvatar(
-                                  backgroundColor: isConnected
-                                      ? Colors.deepPurpleAccent
-                                      : Colors.grey,
-                                  child: const Icon(
-                                    Icons.send,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
+                      title: Text(textChat[index]["role"]!, style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(textChat[index]["text"]!),
+                      contentPadding: EdgeInsets.all(8),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _textController,
+                      decoration: InputDecoration(
+                        hintText: 'Escribe un mensaje...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(Icons.send),
+                    onPressed: isConnected && !loading
+                        ? () => fromText(query: _textController.text)
+                        : null,
+                  ),
+                ],
+              ),
             ),
-          )
-        ],
+          ],
+        ),
       ),
     );
   }

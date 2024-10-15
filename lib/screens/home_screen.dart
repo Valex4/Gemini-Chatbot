@@ -19,23 +19,23 @@ class HomeScreen extends StatelessWidget {
           children: [
             Center(
               child: Image.asset(
-                'images/logoupchiapas.png', // Coloca el logo de tu universidad aquí
+                'lib/images/logoupchiapas.png', // Coloca el logo de tu universidad aquí
                 height: 100,
               ),
             ),
             const SizedBox(height: 20),
             const Text(
-              'Universidad: Universidad Ejemplo',
+              'Universidad Ploitecnica de Chiapas',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             const Text(
-              'Carrera: Ingeniería en Sistemas',
+              'Carrera: Ingeniería en Software',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 10),
             const Text(
-              'Materia: Inteligencia Artificial',
+              'Materia: PROGRAMACIÓN PARA MÓVILES II',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 10),
@@ -45,12 +45,12 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Alumno: Juan Pérez',
+              'Alumno: Isaura Valeria Plata Rojas',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 10),
             const Text(
-              'Matrícula: 12345678',
+              'Matrícula: 221216',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 20),
@@ -76,7 +76,7 @@ class HomeScreen extends StatelessWidget {
               child: TextButton(
                 onPressed: () {
                   // Abre el enlace al repositorio en el navegador
-                  final url = 'https://github.com/isauraplata/api-rest-nutri-balance';
+                  final url = 'https://github.com/isauraplata/chatbox-geminis.git';
                   launch(url); // Asegúrate de tener importado el paquete 'url_launcher'
                 },
                 child: const Text(

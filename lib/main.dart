@@ -87,8 +87,16 @@ class _TextWithImageState extends State<TextWithImage> {
   }
 
   void scrollToTheEnd() {
-    _controller.jumpTo(_controller.position.maxScrollExtent);
-  }
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_controller.hasClients) {
+      _controller.animateTo(
+        _controller.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -113,8 +121,9 @@ class _TextWithImageState extends State<TextWithImage> {
           Expanded(
             child: ListView.builder(
               controller: _controller,
+              physics: const AlwaysScrollableScrollPhysics(), 
               itemCount: textChat.length,
-              padding: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.only(bottom:20),
               itemBuilder: (context, index) {
                 return ListTile(
                   isThreeLine: true,
